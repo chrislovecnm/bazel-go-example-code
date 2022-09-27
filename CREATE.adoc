@@ -1,7 +1,7 @@
 - installed go
 - configured vim
 - installed gcc
-- installed bazellisk
+- installed bazelisk
 - installed cobra-cli https://github.com/spf13/cobra-cli/blob/main/README.md
 -  `go mod init github.com/chrislovecnm/bazel-go-example-code`
 - `~/Workspace/bin/cobra-cli init -a "Chris Love chris@lionkube.com" --license apache`
@@ -82,7 +82,7 @@ in the root directory importing a file starting with the `@` prefix.
 ### Run the gazelle commands
 
 `bazelisk run //:gazelle`
-`bazelist run //:gazelle-update-repos`
+`bazelisk run //:gazelle-update-repos`
 
 You now have the following files:
 
@@ -133,3 +133,128 @@ import (
     "github.com/spf13/cobra"
 )
 ```
+
+Then call `roll.Roll()` after the `fmt.Println` statement. This will give you:
+
+```
+   Run: func(cmd *cobra.Command, args []string) {
+       fmt.Println("roll called")
+       roll.Roll()
+   },
+```
+
+We now need to update the Bazel import, and the easiest way to do this is to run gazelle again.
+
+```
+$ bazelisk run //:gazelle
+```
+
+We can now use bazel to run the binary again:
+
+```
+$ bazelisk run //:bazel-go-example-code roll
+INFO: Analyzed target //:bazel-go-example-code (1 packages loaded, 6 targets configured).
+INFO: Found 1 target...
+Target //:bazel-go-example-code up-to-date:
+  bazel-bin/bazel-go-example-code_/bazel-go-example-code
+INFO: Elapsed time: 0.316s, Critical Path: 0.16s
+INFO: 3 processes: 1 internal, 2 linux-sandbox.
+INFO: Build completed successfully, 3 total actions
+INFO: Build completed successfully, 3 total actions
+roll called
+roll dice
+```
+
+Running the gazelle target modified the Build.bazel file under the cmd directory.  Here is the diff.
+
+```
+diff --git a/cmd/BUILD.bazel b/cmd/BUILD.bazel
+index ac66183..9033b86 100644
+--- a/cmd/BUILD.bazel
++++ b/cmd/BUILD.bazel
+@@ -9,5 +9,8 @@ go_library(
+     ],
+     importpath = "github.com/chrislovecnm/bazel-go-example-code/cmd",
+     visibility = ["//visibility:public"],
+-    deps = ["@com_github_spf13_cobra//:cobra"],
++    deps = [
++        "//pkg/roll",
++        "@com_github_spf13_cobra//:cobra",
++    ],
+ )
+```
+
+The line was added inside of the deps stanza that points to the package where roll.go resides.
+
+We can the call to the `GenerateWord()` func inside of cmd/word.go.
+
+Here is the diff afterwards.
+
+```
+diff --git a/cmd/word.go b/cmd/word.go
+index d7d00bb..cddc748 100644
+--- a/cmd/word.go
++++ b/cmd/word.go
+@@ -1,12 +1,12 @@
+ /*
+ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+-
+ */
+ package cmd
+
+ import (
+        "fmt"
+
++       "github.com/chrislovecnm/bazel-go-example-code/pkg/word"
+        "github.com/spf13/cobra"
+ )
+
+@@ -22,6 +22,7 @@ This application is a tool to generate the needed files
+ to quickly create a Cobra application.`,
+        Run: func(cmd *cobra.Command, args []string) {
+                fmt.Println("word called")
++               word.GenerateWord()
+        },
+ }
+```
+
+We added the import and the call to `word.GenerateWord()`. Again we can run gazelle 
+add the new dep to the BUILD.bazel file. 
+
+Now we have BUILD.bazel updated.
+
+```
+diff --git a/cmd/BUILD.bazel b/cmd/BUILD.bazel
+index ac66183..891b0e1 100644
+--- a/cmd/BUILD.bazel
++++ b/cmd/BUILD.bazel
+@@ -9,5 +9,9 @@ go_library(
+     ],
+     importpath = "github.com/chrislovecnm/bazel-go-example-code/cmd",
+     visibility = ["//visibility:public"],
+-    deps = ["@com_github_spf13_cobra//:cobra"],
++    deps = [
++        "//pkg/roll",
++        "//pkg/word",
++        "@com_github_spf13_cobra//:cobra",
++    ],
+ )
+```
+
+We can use bazel to execute the binary with the new changes.
+
+```
+$ bazelisk run //:bazel-go-example-code word
+INFO: Analyzed target //:bazel-go-example-code (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //:bazel-go-example-code up-to-date:
+  bazel-bin/bazel-go-example-code_/bazel-go-example-code
+INFO: Elapsed time: 0.107s, Critical Path: 0.00s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+INFO: Build completed successfully, 1 total action
+word called
+GenerateWord
+```
+
+

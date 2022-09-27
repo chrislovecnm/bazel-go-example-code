@@ -9,5 +9,9 @@ go_library(
     ],
     importpath = "github.com/chrislovecnm/bazel-go-example-code/cmd",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_spf13_cobra//:cobra"],
+    deps = [
+        "//pkg/roll",
+        "//pkg/word",
+        "@com_github_spf13_cobra//:cobra",
+    ],
 )
