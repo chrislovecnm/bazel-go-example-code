@@ -1,4 +1,4 @@
-
+# Go and Bazel
 
 ## Dependencies
 
@@ -231,10 +231,8 @@ following.
 ├── main.go
 └── pkg
     ├── roll
-    │   ├── BUILD.bazel
     │   └── roll_dice.go
     └── word
-        ├── BUILD.bazel
         └── generate_word.go
 ```
 
@@ -282,6 +280,10 @@ You now have the following files:
         └── generate_word.go
 ```
 
+We now have additional BUILD.bazel files in the cmd and pkg directories.
+
+// TODO walk through the files that were created.
+
 Next we will modify the root.go and word.go files.
 
 ## Using the files under pkg
@@ -292,8 +294,8 @@ Now we want to add in the roll and word files under the pkg directory.
 ├── cmd
 │   ├── roll.go
 └── pkg
-    ├── roll
-    │   └── roll_dice.go
+    └── roll
+        └── roll_dice.go
 ```
 
 Edit roll.go under the cmd folder and add an import to roll_dice.
@@ -429,6 +431,11 @@ We can use bazel to execute the binary with the new changes.
 
 ```
 $ bazelisk run //:bazel-go-example-code word
+```
+
+The above command genertates the following output.
+
+```
 INFO: Analyzed target //:bazel-go-example-code (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //:bazel-go-example-code up-to-date:
@@ -440,6 +447,10 @@ INFO: Build completed successfully, 1 total action
 word called
 GenerateWord
 ```
+
+The project is now modified so that the files under pkg are now used.  This is the 
+principle of using internal dependencies.  Next we will add a go project that
+is hosted out of github, and not local to this project.
 
 ## Adding external dependency
 
