@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "word",
     srcs = ["generate_word.go"],
-    importpath = "github.com/chrislovecnm/bazel-go-code-example/pkg/word",
+    importpath = "github.com/chrislovecnm/bazel-go-example-code/pkg/word",
     visibility = ["//visibility:public"],
 )

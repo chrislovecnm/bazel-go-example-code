@@ -1,5 +1,6 @@
 - installed go
 - configured vim
+- installed gcc
 - installed bazellisk
 - installed cobra-cli https://github.com/spf13/cobra-cli/blob/main/README.md
 -  `go mod init github.com/chrislovecnm/bazel-go-example-code`
@@ -50,6 +51,10 @@ func GenerateWord() {
 }
 ```
 
+### Add files to git
+
+Just do it
+
 ## Create WORKSPACE file
 
 - https://github.com/bazelbuild/rules_go
@@ -62,8 +67,19 @@ Add following to the WORKSPACE file https://github.com/bazelbuild/bazel-gazelle#
 ```
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix github.com/chrislovecnm/bazel-go-code-example
+# gazelle:prefix github.com/chrislovecnm/bazel-go-example-code
 gazelle(name = "gazelle")
 ```
 
 Update the prefix with the correct path to your code.
+
+## Create the other build files
+
+The `gazelle:prefix` is critical.  If the prefix is not named correctly
+you will get code importing incorrectly. For instance you will get BUILD.bazel
+in the root directory importing a file starting with the `@` prefix.
+
+### Run the gazelle commands
+
+`bazelisk run //:gazelle`
+`bazelist run //:gazelle-update-repos`
