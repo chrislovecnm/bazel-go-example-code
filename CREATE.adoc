@@ -1,0 +1,69 @@
+- installed go
+- configured vim
+- installed bazellisk
+- installed cobra-cli https://github.com/spf13/cobra-cli/blob/main/README.md
+-  `go mod init github.com/chrislovecnm/bazel-go-example-code`
+- `~/Workspace/bin/cobra-cli init -a "Chris Love chris@lionkube.com" --license apache`
+- `~/Workspace/bin/cobra-cli add roll
+- `~/Workspace/bin/cobra-cli add word`
+-  `mkdir -p pkg/{word,roll}`
+
+
+Add more code
+
+```
+├── cmd
+│   ├── roll.go
+│   ├── root.go
+│   └── word.go
+├── go.mod
+├── go.sum
+├── main.go
+└── pkg
+    ├── roll
+    │   └── roll_dice.go
+    └── word
+        └── generate_word.go
+```
+
+Code contents roll.go
+
+```
+package roll
+
+import "fmt"
+
+func Roll() {
+        fmt.Println("roll dice")
+}
+```
+
+Code contents word.go
+
+```
+package word
+
+import "fmt"
+
+func GenerateWord() {
+        fmt.Println("GenerateWord")
+}
+```
+
+## Create WORKSPACE file
+
+- https://github.com/bazelbuild/rules_go
+- https://github.com/bazelbuild/bazel-gazelle
+
+Add following to the WORKSPACE file https://github.com/bazelbuild/bazel-gazelle#running-gazelle-with-bazel
+
+## Create intial BUILD file
+
+```
+load("@bazel_gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix github.com/chrislovecnm/bazel-go-code-example
+gazelle(name = "gazelle")
+```
+
+Update the prefix with the correct path to your code.
