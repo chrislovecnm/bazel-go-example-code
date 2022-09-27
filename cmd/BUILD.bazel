@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmd",
+    srcs = [
+        "roll.go",
+        "root.go",
+        "word.go",
+    ],
+    importpath = "github.com/chrislovecnm/bazel-go-code-example/cmd",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_spf13_cobra//:go_default_library"],
+)

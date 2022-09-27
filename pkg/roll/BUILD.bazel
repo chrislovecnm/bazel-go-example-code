@@ -1,0 +1,8 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "roll",
+    srcs = ["roll_dice.go"],
+    importpath = "github.com/chrislovecnm/bazel-go-code-example/pkg/roll",
+    visibility = ["//visibility:public"],
+)
