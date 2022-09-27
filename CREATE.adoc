@@ -1,16 +1,69 @@
-- installed go
-- configured vim
-- installed gcc
-- installed bazelisk
-- installed cobra-cli https://github.com/spf13/cobra-cli/blob/main/README.md
--  `go mod init github.com/chrislovecnm/bazel-go-example-code`
-- `~/Workspace/bin/cobra-cli init -a "Chris Love chris@lionkube.com" --license apache`
-- `~/Workspace/bin/cobra-cli add roll
-- `~/Workspace/bin/cobra-cli add word`
--  `mkdir -p pkg/{word,roll}`
 
 
-Add more code
+## Dependencies
+
+We use the following dependencies for the example.
+
+- go: https://go.dev/doc/install
+- gcc: use your systems package manager
+- bazelisk: https://github.com/bazelbuild/bazelisk#installation
+
+Technically we do not need the go binary installed, but we are going to use
+`cobra-cli` to generate some project code.  We did not want to add the 
+extract work in bazel to run the binary using bazel.
+
+## The project
+
+We are going to create a small example project first using go.  As
+we mentioned you do not need to use go directly at all, when using bazel.
+But to get a "easy" jump start we wanted to quickly generate some code.
+
+The project is going to consist of a simple cli program that rolls a
+random number or generates a random word.
+
+## Generate the project framework
+
+First create a git repository to store you work.  Next use go
+to install cobra-cli.  The cobra-cli binary is provided by the spf13/cobra
+project for the intial generation of cli code:
+https://github.com/spf13/cobra-cli/blob/main/README.md.
+
+For our example we are using github.com/chrislovecnm/bazel-go-example-code.
+
+First use go mod and init the code example.
+
+```
+$ go mod init github.com/chrislovecnm/bazel-go-example-code
+```
+
+Next use cobra-cli to create go root, rool and word files.
+
+```
+$ ~/Workspace/bin/cobra-cli init -a "Chris Love chris@lionkube.com" --license apache
+$ ~/Workspace/bin/cobra-cli add roll -a "Chris Love chris@lionkube.com" --license apache
+$ ~/Workspace/bin/cobra-cli add word -a "Chris Love chris@lionkube.com" --license apache
+```
+
+You will now have the following files:
+
+```
+├── cmd
+│   ├── roll.go
+│   ├── root.go
+│   └── word.go
+├── go.mod
+├── go.sum
+└── main.go
+```
+
+Let's add a couple of directories:
+
+```
+mkdir -p pkg/{word,roll}
+```
+
+Inside of those directories we can add roll_dice.go and generate_word.go files.
+You will end up with the following file structure:
 
 ```
 ├── cmd
@@ -27,7 +80,8 @@ Add more code
         └── generate_word.go
 ```
 
-Code contents roll.go
+In the roll_dice.go file add the following code:
+
 
 ```
 package roll
@@ -39,7 +93,7 @@ func Roll() {
 }
 ```
 
-Code contents word.go
+In the generate_word.go file add the the following code:
 
 ```
 package word
@@ -51,14 +105,36 @@ func GenerateWord() {
 }
 ```
 
-### Add files to git
+Next add files to git and push there contents to your remote repo.
 
-Just do it
+## Go and Bazel
 
-## Create WORKSPACE file
+In order to use go and bazel we are going to use rules_go and bazel-gazelle.
 
 - https://github.com/bazelbuild/rules_go
 - https://github.com/bazelbuild/bazel-gazelle
+
+rules_go is the set of bazel rules that allows for the various functionality including
+dependency management and go compilations. A bazel rule defines a series of actions that 
+Bazel performs on inputs to produce a set of outputs, which are referenced in 
+providers returned by the rule's implementation function.
+
+Gazelle is a build file generator for Bazel projects. It can create new BUILD.bazel files
+for a project that follows language conventions, and it can update existing build files to 
+include new sources, dependencies, and options. Gazelle natively supports Go and protobuf, 
+haskell, java, javascript. A user can extend Gazelle to support new lanaguages and other
+generation rules.
+
+So we define rules_go to build our code, and we use gazelle to manage our BUILD.bazel files.
+
+If you are not familiar with BUILD.bazel files or WORKSPACE files take a look at:
+https://bazel.build/concepts/build-files
+
+Next let's create our WORKSPACE file so that bazel knows it is using rules_go and gazelle.
+
+## Create WORKSPACE file
+
+
 
 Add following to the WORKSPACE file https://github.com/bazelbuild/bazel-gazelle#running-gazelle-with-bazel
 
@@ -256,5 +332,119 @@ INFO: Build completed successfully, 1 total action
 word called
 GenerateWord
 ```
+
+## Adding external dependency
+
+
+To create our random work generator we are going to use babble, which is located here: 
+https://github.com/tjarratt/babble. The babble code On Linux uses "/usr/share/dicts/words" file, and you can use 
+the package manager to install wamerican or wbritish.
+
+Edit generate_word.go to add the call to babble.
+
+```
+└── pkg
+    └── word
+        └── generate_word.go
+```
+
+We need to add the import to babble and call the babble func. Here is the diff after the updates.
+I also cleaned up the Println to add some clarity.
+
+```
+diff --git a/pkg/word/generate_word.go b/pkg/word/generate_word.go
+index 312a267..37215cf 100644
+--- a/pkg/word/generate_word.go
++++ b/pkg/word/generate_word.go
+@@ -1,7 +1,12 @@
+ package word
+
+-import "fmt"
++import (
++       "fmt"
++
++       "github.com/tjarratt/babble"
++)
+
+ func GenerateWord() {
++       fmt.Println("GenerateWord called")
++       fmt.Println(babble.NewBabbler().Babble())
+ }
+```
+
+Once that is done, we need to run go mod to update the projects 
+dependencies.
+
+```
+$ bazel run @go_sdk//:bin/go -- mod tidy
+```
+
+Keeping go.mod updated allows us to either use go directly or bazel to build
+and run the code.
+
+We now need to update the Bazel import, and the easiest way to do this is to run gazelle again.
+
+```
+$ bazelisk run //:gazelle-update-repos
+$ bazelisk run //:gazelle
+```
+
+The first bazel command updates deps.bzl file. The second command
+updates the BUILD.bazel file in pkg/word.  Below is the diff of the 
+updates.
+
+```
+diff --git a/pkg/word/BUILD.bazel b/pkg/word/BUILD.bazel
+index c974b0b..e5c0b28 100644
+--- a/pkg/word/BUILD.bazel
++++ b/pkg/word/BUILD.bazel
+@@ -5,4 +5,5 @@ go_library(
+     srcs = ["generate_word.go"],
+     importpath = "github.com/chrislovecnm/bazel-go-example-code/pkg/word",
+     visibility = ["//visibility:public"],
++    deps = ["@com_github_tjarratt_babble//:babble"],
+ )
+
+```
+
+You can see the deps is now updated and points to the external repo "@com_github_tjarratt_babble//:babble".
+
+This repo is defined in deps.bzl file in the following go_repository stanza.
+
+```
+go_repository(
+    name = "com_github_tjarratt_babble",
+    importpath = "github.com/tjarratt/babble",
+    sum = "h1:j8whCiEmvLCXI3scVn+YnklCU8mwJ9ZJ4/DGAKqQbRE=",
+    version = "v0.0.0-20210505082055-cbca2a4833c1",
+)
+```
+
+We can now run our binary and see the changes.
+
+```
+$ bazelisk run //:bazel-go-example-code word
+INFO: Analyzed target //:bazel-go-example-code (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //:bazel-go-example-code up-to-date:
+  bazel-bin/bazel-go-example-code_/bazel-go-example-code
+INFO: Elapsed time: 0.257s, Critical Path: 0.15s
+INFO: 3 processes: 1 internal, 2 linux-sandbox.
+INFO: Build completed successfully, 3 total actions
+INFO: Build completed successfully, 3 total actions
+word called
+GenerateWord called
+Rheingau-nightclothes
+```
+
+To recap what we have done.  We have modified our code to use the babble go code which lives on 
+github.  We then use bazel to run go mod, which updates go.mod file. Next we ran gazelle-update-repos and gazelle
+with bazel. The first bazel alias updated the deps.bzl file with the external dependency, and the gazelle target 
+updated the deps section in pkg/word/BUILD.bazel.  Bazel is then able to download the external dependency
+and use that dependency when our example go program is compiled.
+
+
+## Testing
+
 
 

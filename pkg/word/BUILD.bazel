@@ -5,4 +5,5 @@ go_library(
     srcs = ["generate_word.go"],
     importpath = "github.com/chrislovecnm/bazel-go-example-code/pkg/word",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_tjarratt_babble//:babble"],
 )
