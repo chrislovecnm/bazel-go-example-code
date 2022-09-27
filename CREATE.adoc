@@ -134,31 +134,128 @@ Next let's create our WORKSPACE file so that bazel knows it is using rules_go an
 
 ## Create WORKSPACE file
 
+We now need to create the bazel WORKSPACE file.
+This is documented here: https://github.com/bazelbuild/bazel-gazelle#running-gazelle-with-bazel
 
+```
+# use http_archive to download bazel rules_go
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-Add following to the WORKSPACE file https://github.com/bazelbuild/bazel-gazelle#running-gazelle-with-bazel
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "099a9fb96a376ccbbb7d291ed4ecbdfd42f6bc822ab77ae6f1b5cb9e914e94fa",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.35.0/rules_go-v0.35.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.35.0/rules_go-v0.35.0.zip",
+    ],
+)
+
+# use http_archive to download bazel_gazelle dependency
+http_archive(
+    name = "bazel_gazelle",
+    sha256 = "efbbba6ac1a4fd342d5122cbdfdb82aeb2cf2862e35022c752eaddffada7c3f3",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.27.0/bazel-gazelle-v0.27.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.27.0/bazel-gazelle-v0.27.0.tar.gz",
+    ],
+)
+
+# load bazel and gazelle rules
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+############################################################
+# Define your own dependencies here using go_repository.
+# Else, dependencies declared by rules_go/gazelle will be used.
+# The first declaration of an external repository "wins".
+############################################################
+
+# we are going to store the go dependecy definitions
+# in a different file "deps.bzl". We can include those 
+# definitions in this file, but it gets quite verbose.
+load("//:deps.bzl", "go_dependencies")
+
+# Next we initialize the tool chains
+
+# gazelle:repository_macro deps.bzl%go_dependencies
+go_dependencies()
+
+go_rules_dependencies()
+
+# We define the version of go that this project uses
+go_register_toolchains(version = "1.19.1")
+
+gazelle_dependencies()
+```
+
+The above WORKSPACE file contains specific version numbers for rules_go and gazelle.  Refer to the 
+gazelle site to use the latest versions.  Also update the  `go_register_toolchains(version = "1.19.1")`
+to the version that you would like to use of go.
+
+Next we need to a BUILD file in the root project directory.
 
 ## Create intial BUILD file
 
+Here are the contents of the BUILD file:
+
 ```
+# Load the gazelle rule
 load("@bazel_gazelle//:def.bzl", "gazelle")
+
+# The following comment defines the import path that corresponds to the repository root directory.
+# This is a critical definition, and if you mess this up all of the BUILD file generation 
+# will have errors.
+
+# Modify the name to your project name in your git repository.
 
 # gazelle:prefix github.com/chrislovecnm/bazel-go-example-code
 gazelle(name = "gazelle")
 ```
-
-Update the prefix with the correct path to your code.
-
-## Create the other build files
-
-The `gazelle:prefix` is critical.  If the prefix is not named correctly
+Again the `gazelle:prefix` is critical.  If the prefix is not named correctly
 you will get code importing incorrectly. For instance you will get BUILD.bazel
 in the root directory importing a file starting with the `@` prefix.
 
+
+Now we have a WORKSPACE and BUILD.bazel files.  You directory should resemble the
+following.
+
+```
+├── BUILD.bazel
+├── WORKSPACE
+├── cmd
+│   ├── roll.go
+│   ├── root.go
+│   └── word.go
+├── go.mod
+├── go.sum
+├── main.go
+└── pkg
+    ├── roll
+    │   ├── BUILD.bazel
+    │   └── roll_dice.go
+    └── word
+        ├── BUILD.bazel
+        └── generate_word.go
+```
+
+Next we will use bazel to run the gazelle target.
+
 ### Run the gazelle commands
 
-`bazelisk run //:gazelle`
-`bazelisk run //:gazelle-update-repos`
+As we previously mentioned we use bazel to run gazelle, and 
+gazelle manages the BUILD.bazel files for us.
+
+We are using bazelisk to manage and run bazel, but we will
+typically say "run bazel" instead of run "bazelisk".  
+
+Run the following command to update the BUILD.bazel file.  
+The following commands will also generate the other BUILD.bazel
+files that are required.
+
+```
+$ bazelisk run //:gazelle
+$ bazelisk run //:gazelle-update-repos
+```
 
 You now have the following files:
 
@@ -185,7 +282,9 @@ You now have the following files:
         └── generate_word.go
 ```
 
-## Adding more code
+Next we will modify the root.go and word.go files.
+
+## Using the files under pkg
 
 Now we want to add in the roll and word files under the pkg directory.
 
@@ -219,7 +318,9 @@ Then call `roll.Roll()` after the `fmt.Println` statement. This will give you:
    },
 ```
 
-We now need to update the Bazel import, and the easiest way to do this is to run gazelle again.
+We now need to update the BAZEL.build files, and the easiest way to do this is to run gazelle again.
+
+Execute the following command
 
 ```
 $ bazelisk run //:gazelle
@@ -229,6 +330,13 @@ We can now use bazel to run the binary again:
 
 ```
 $ bazelisk run //:bazel-go-example-code roll
+
+```
+
+The above command builds the binary and executes it.  The following
+is an example of the output from the run command.
+
+```
 INFO: Analyzed target //:bazel-go-example-code (1 packages loaded, 6 targets configured).
 INFO: Found 1 target...
 Target //:bazel-go-example-code up-to-date:
