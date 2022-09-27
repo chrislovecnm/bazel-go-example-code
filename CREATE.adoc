@@ -1,5 +1,9 @@
 # Go and Bazel
 
+# Support
+
+// TODO
+
 ## Dependencies
 
 We use the following dependencies for the example.
@@ -11,6 +15,12 @@ We use the following dependencies for the example.
 Technically we do not need the go binary installed, but we are going to use
 `cobra-cli` to generate some project code.  We did not want to add the 
 extract work in bazel to run the binary using bazel.
+
+Bazelisk is a wrapper for Bazel written in Go. It automatically picks a good 
+version of Bazel given your current working directory, downloads it from 
+the official server (if required) and then transparently passes through all 
+command-line arguments to the real Bazel binary.  You can call it just 
+like you would call Bazel.
 
 ## The project
 
@@ -210,10 +220,30 @@ load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/chrislovecnm/bazel-go-example-code
 gazelle(name = "gazelle")
+
+# Add a rule to call gazelle and pull in new go dependencies.
+# You can run this using the following command:
+# $ bazelisk run //:gazelle-update-repos
+gazelle(
+    name = "gazelle-update-repos",
+    args = [
+        "-from_file=go.mod",
+        "-to_macro=deps.bzl%go_dependencies",
+        "-prune",
+    ],
+    command = "update-repos",
+)
+
 ```
 Again the `gazelle:prefix` is critical.  If the prefix is not named correctly
-you will get code importing incorrectly. For instance you will get BUILD.bazel
-in the root directory importing a file starting with the `@` prefix.
+gazelle does not update BUILD.bazel file correctly. For instance you will get BUILD.bazel
+in the root directory with a dep a file starting with the `@` prefix, when
+the dep should point to a local file.
+
+The update command is the most common way of running Gazelle. 
+Gazelle scans sources in directories throughout the repository, 
+then creates and updates build files. The BUILD.bazel file includes
+and alias to run update.
 
 
 Now we have a WORKSPACE and BUILD.bazel files.  You directory should resemble the
@@ -563,7 +593,11 @@ updated the deps section in pkg/word/BUILD.bazel.  Bazel is then able to downloa
 and use that dependency when our example go program is compiled.
 
 
-## Testing
+## Go tests
+
+// TODO
+
+## Summary
 
 
 
