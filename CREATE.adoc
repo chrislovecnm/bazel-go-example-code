@@ -83,3 +83,53 @@ in the root directory importing a file starting with the `@` prefix.
 
 `bazelisk run //:gazelle`
 `bazelist run //:gazelle-update-repos`
+
+You now have the following files:
+
+```
+├── BUILD.bazel
+├── CREATE.adoc
+├── LICENSE
+├── WORKSPACE
+├── cmd
+│   ├── BUILD.bazel
+│   ├── roll.go
+│   ├── root.go
+│   └── word.go
+├── deps.bzl
+├── go.mod
+├── go.sum
+├── main.go
+└── pkg
+    ├── roll
+    │   ├── BUILD.bazel
+    │   └── roll_dice.go
+    └── word
+        ├── BUILD.bazel
+        └── generate_word.go
+```
+
+## Adding more code
+
+Now we want to add in the roll and word files under the pkg directory.
+
+```
+├── cmd
+│   ├── roll.go
+└── pkg
+    ├── roll
+    │   └── roll_dice.go
+```
+
+Edit roll.go under the cmd folder and add an import to roll_dice.
+
+You will now have:
+
+```
+import (
+    "fmt"
+
+    "github.com/chrislovecnm/bazel-go-example-code/pkg/roll"
+    "github.com/spf13/cobra"
+)
+```
