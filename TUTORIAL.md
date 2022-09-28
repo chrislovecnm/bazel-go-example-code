@@ -705,7 +705,7 @@ import (
 Then call `roll.Roll()` after the `fmt.Println` statement. This will give you:
 
 ```
-   Run: func(cmd \*cobra.Command, args []string) {
+   Run: func(cmd *cobra.Command, args []string) {
        fmt.Println("roll called")
        roll.Roll()
    },
@@ -721,7 +721,7 @@ You have editted the following files.
         └── roll_dice.go
 ```
 
-We now need to update the BAZEL.build files, and the easiest way to do this is to run gazelle again.
+We now need to update the BUILD.bazel files, and the easiest way to do this is to run gazelle again.
 
 Execute the following command
 
@@ -961,10 +961,208 @@ with bazel. The first bazel alias updated the deps.bzl file with the external de
 updated the deps section in pkg/word/BUILD.bazel.  Bazel is then able to download the external dependency
 and use that dependency when our example go program is compiled.
 
+Next we can add some testing.
 
 ## Go tests
 
-// TODO
+As we mentioned bazel support running code tests, as defined in bazel rules. One of the rules from go_rules
+is go_test.  Now lets add a test.
+
+First refactor the fun GenerateWord in the Go file pkg/word/generate.go to return a string, rather than printing it.
+
+Here are the changes:
+
+```
+func GenerateWord() string {
+    fmt.Println("GenerateWord called")
+    return babble.NewBabbler().Babble()
+}
+```
+
+This will allow use to test that this func does not return a string that is empty.
+
+Now move the Println higher up in the stack so that the random word is still printed.
+Edit cmd/word.go file, and add a Println around the call to GenerateWord().
+
+Here are these changes.
+
+```
+    Run: func(cmd *cobra.Command, args []string) {
+        fmt.Println("word called")
+        fmt.Println(word.GenerateWord())
+    },
+```
+
+Now let us build the code to make sure that we did not make any mistakes.
+
+```
+$ bazelisk build //...
+```
+If this fails you will get an error message.
+
+Create a new file in the pkg/word director called generate_word_test.go.
+Include the following code:
+
+```
+package word
+
+import (
+    "testing"
+)
+
+func TestGenerateWord(t *testing.T) {
+    result := GenerateWord()
+    if result == "" {
+        t.Error("got an empty string")
+    }
+}
+```
+
+We have a unit test now, but bazel does not know about it.  Again we need 
+bazel to have the target in its object graph, and in order to do that we need
+to update the BUILD.bazel file.  The easiest way to do that is with gazelle.
+
+Simply run:
+
+```
+$ bazelisk run //:gazelle
+```
+
+This now updates the the BUILD.bazel file in the pkg/word directory.  Here
+is a diff of the update:
+
+```
+diff --git a/pkg/word/BUILD.bazel b/pkg/word/BUILD.bazel
+index e5c0b28..1b79ce0 100644
+--- a/pkg/word/BUILD.bazel
++++ b/pkg/word/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+ go_library(
+     name = "word",
+@@ -7,3 +7,9 @@ go_library(
+     visibility = ["//visibility:public"],
+     deps = ["@com_github_tjarratt_babble//:babble"],
+ )
++
++go_test(
++    name = "word_test",
++    srcs = ["generate_word_test.go"],
++    embed = [":word"],
++)
+```
+
+We now have a [go_test](https://github.com/bazelbuild/rules_go/blob/master/docs/go/core/rules.md#go_test) 
+rule, which is part of the rules_go ruleset. Now we can run:
+
+```
+$ bazelisk test //...
+```
+
+The above command should print out results like:
+
+```
+$ bazelisk test //...
+INFO: Analyzed 6 targets (0 packages loaded, 0 targets configured).
+INFO: Found 5 targets and 1 test target...
+INFO: Elapsed time: 0.125s, Critical Path: 0.00s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+//pkg/word:word_test                                            (cached) PASSED in 0.0s
+
+Executed 0 out of 1 test: 1 test passes.
+INFO: Build completed successfully, 1 total action
+```
+
+You may also notice that the command printed out a target named //pkg/word:word_test.
+We can also run just the specific test:
+
+```
+$ bazelisk test //pkg/word:word_test
+```
+
+Lets now see what happens when a test fails, since debugging unit tests are often part of the
+development process. In the generate_word_test.go file change the "if" statement as show below.
+
+```
+    if result == "" {
+```
+
+Now if we run
+
+```
+$ bazelisk test //pkg/word:word_test
+```
+
+We get an output like
+
+```
+$ bazelisk test //...
+INFO: Analyzed 6 targets (0 packages loaded, 0 targets configured).
+INFO: Found 5 targets and 1 test target...
+FAIL: //pkg/word:word_test (see /home/clove/.cache/bazel/_bazel_clove/d1fd07b841c26eda93328e4eeaf2336a/execroot/__main__/bazel-out/k8-fastbuild/testlogs/pkg/word/word_test/test.log)
+INFO: Elapsed time: 0.299s, Critical Path: 0.17s
+INFO: 6 processes: 1 internal, 5 linux-sandbox.
+INFO: Build completed, 1 test FAILED, 6 total actions
+//pkg/word:word_test                                                     FAILED in 0.0s
+  /home/clove/.cache/bazel/_bazel_clove/d1fd07b841c26eda93328e4eeaf2336a/execroot/__main__/bazel-out/k8-fastbuild/testlogs/pkg/word/word_test/test.log
+
+INFO: Build completed, 1 test FAILED, 6 total actions
+```
+
+The line that diplays the path to the test.log file will differ between systems, but it provides output from the unit test.
+If we cat the file we see the results:
+
+```
+$ cat /home/clove/.cache/bazel/_bazel_clove/d1fd07b841c26eda93328e4eeaf2336a/execroot/__main__/bazel-out/k8-fastbuild/testlogs/pkg/word/word_test/test.log
+exec ${PAGER:-/usr/bin/less} "$0" || exit 1
+Executing tests from //pkg/word:word_test
+-----------------------------------------------------------------------------
+GenerateWord called
+HERE
+grebes-slickness's
+--- FAIL: TestGenerateWord (0.00s)
+    generate_word_test.go:13: got an empty string
+FAIL
+```
+
+Adding the "test_ouput" argument to the bazel test command will output the test results to the console.
+
+```
+$ bazelisk test --test_output=errors //...
+INFO: Analyzed 6 targets (0 packages loaded, 0 targets configured).
+INFO: Found 5 targets and 1 test target...
+FAIL: //pkg/word:word_test (see /home/clove/.cache/bazel/_bazel_clove/d1fd07b841c26eda93328e4eeaf2336a/execroot/__main__/bazel-out/k8-fastbuild/testlogs/pkg/word/word_test/test.log)
+INFO: From Testing //pkg/word:word_test:
+==================== Test output for //pkg/word:word_test:
+GenerateWord called
+HERE
+justest-indefensibly
+--- FAIL: TestGenerateWord (0.00s)
+    generate_word_test.go:13: got an empty string
+FAIL
+================================================================================
+INFO: Elapsed time: 0.191s, Critical Path: 0.02s
+INFO: 2 processes: 1 internal, 1 linux-sandbox.
+INFO: Build completed, 1 test FAILED, 2 total actions
+//pkg/word:word_test                                                     FAILED in 0.0s
+  /home/clove/.cache/bazel/_bazel_clove/d1fd07b841c26eda93328e4eeaf2336a/execroot/__main__/bazel-out/k8-fastbuild/testlogs/pkg/word/word_test/test.log
+
+INFO: Build completed, 1 test FAILED, 2 total actions
+```
+
+So now we know how to include a new unit test, update BUILD.bazel rules with gazelle, and then run the test.
+
+## Other rules in rules_go
+
+The rules_go [documentation](https://github.com/bazelbuild/rules_go#documentation) provides a great reference to the different
+rules provided in the ruleset.
+
+We have covered three of the top rules 'go_binary', 'go_library', and 'go_test'. Other popular rules include:
+
+- Proto rules rules_go provides rules that generate Go packages from .proto files. These packages can be imported like regular Go libraries.
 
 ## Summary
 
