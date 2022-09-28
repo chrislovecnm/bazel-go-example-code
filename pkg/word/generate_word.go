@@ -6,7 +6,7 @@ import (
 	"github.com/tjarratt/babble"
 )
 
-func GenerateWord() {
+func GenerateWord() string {
 	fmt.Println("GenerateWord called")
-	fmt.Println(babble.NewBabbler().Babble())
+	return babble.NewBabbler().Babble()
 }
