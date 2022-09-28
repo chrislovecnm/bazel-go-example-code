@@ -388,7 +388,129 @@ and created new BUILD files as well. There is a layout of the bazel files in the
         └── BUILD.bazel
 ```
 
-The WORKSPACE file was updated as well, and we have a another new file called "deps.bzl".
+The WORKSPACE file was updated as well, and we have a another new file called "deps.bzl". 
+We now have a working bazel project, so what commands can we run?
+
+### Basic bazel commands
+
+There are a various bazel [commands](https://bazel.build/run/build#available-commands) that 
+are defined.
+
+The main ones that are typically run by developers are [build](https://bazel.build/run/build#bazel-build),
+[test](https://bazel.build/docs/user-manual#running-tests) and [run](https://bazel.build/docs/user-manual#running-executables).
+
+The build and test commands are pretty self explanitory.  The build command builds the source code
+for your project, which the test command runs any tests that are defined. The run command
+execs a rule, for instance executes a go binary.
+
+In the project you can run
+
+```
+$ bazelisk build //...
+```
+
+This will build the binary for our example project. We can run the binary that build
+creates with the following command:
+
+```
+$ bazelisk run //:bazel-go-example-code
+```
+You can also pass in the command line option "word" that we defined.
+
+```
+$ bazelisk run //:bazel-go-example-code word
+```
+
+We will talk about the "test" command later.
+
+So the command build, run and test are pretty easy to get your head around, but the third part of the
+command was a bit confusing for me when I first learned bazel.  The "//..." or "//:something" is 
+what is called a target.
+
+You can refer to the documentation [here](https://bazel.build/run/build#bazel-build).  The targets 
+are all the targets in a given directory or is the name of a specific target.  Some commands like
+build and test can run multiple targets, while a command like run can only execute one target.
+
+The below table provides a great guide for targets
+
+<table>
+<tbody><tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>bar:wiz</code></td>
+  <td>Just the single target <code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>bar:wiz</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>bar</code></td>
+  <td>Equivalent to <code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>bar:bar</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>bar:all</code></td>
+  <td>All rule targets in the package <code translate="no" dir="ltr">foo/<wbr>bar</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>.<wbr>.<wbr>.<wbr></code></td>
+  <td>All rule targets in all packages beneath the directory <code translate="no" dir="ltr">foo</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>.<wbr>.<wbr>.<wbr>:all</code></td>
+  <td>All rule targets in all packages beneath the directory <code translate="no" dir="ltr">foo</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>.<wbr>.<wbr>.<wbr>:&#42;</code></td>
+  <td>All targets (rules and files) in all packages beneath the directory <code translate="no" dir="ltr">foo</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>foo/<wbr>.<wbr>.<wbr>.<wbr>:all-targets</code></td>
+  <td>All targets (rules and files) in all packages beneath the directory <code translate="no" dir="ltr">foo</code>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>.<wbr>.<wbr>.<wbr></code></td>
+  <td>All targets in packages in the workspace. This does not include targets
+  from <a href="/docs/external">external repositories</a>.</td>
+</tr>
+<tr>
+  <td><code translate="no" dir="ltr">/<wbr>/<wbr>:all</code></td>
+  <td>All targets in the top-level package, if there is a `BUILD` file at the
+  root of the workspace.</td>
+</tr>
+</tbody></table>
+
+> <cite>https://bazel.build/run/build#specifying-build-targets</cite>
+
+If we look in the BUILD.bazel file in the root directory will will find a go_libary rule
+named bazel-go-example-code_lib, and this is a target we can build.
+
+```
+$ bazelisk build //:bazel-go-example-code_lib
+```
+
+This go_libary is named by gazelle automatically depending on the name of your project, so
+the name may differ.
+
+We can also run the bazel-go-example-code binary target
+
+```
+$ bazelisk run //:bazel-go-example-code word
+```
+
+Or we can build all of the targets under the pkg directory:
+
+```
+$ bazelisk build //pkg/...
+```
+
+We wanted to include a side note about "bazel build".  You may wonder where the heck is the binary put?
+Bazel creates various folders and symlinks in project directory. Within out example we have
+
+- bazel-bazel-gazelle
+- bazel-bin
+- bazel-out
+- bazel-bazel-go-example-code
+- bazel-testlogs
+
+Binaries from the project are placed under the bazel-bin folder.  Inside of that folder we have another folder
+that has the name bazel-go-example-code\_ and that folder name is created from the name of the binary that is 
+created.  A bazel project can contain multiple binaries, so we have to have that form of naming syntax.  Inside
+of the bazel-go-example-code\_ folder we have the binary bazel-go-example-code\_.
 
 ### Where gazelle defines the dependencies
 
@@ -446,9 +568,120 @@ The rules_go have several "Core rules" defined.  These include:
 - go_source
 - go_path
 
-And these StarLark rules are used inside of the BUILD files.
+See [here](https://github.com/bazelbuild/rules_go/blob/master/docs/go/core/rules.md) for more details.
+And these StarLark rules are used inside of the BUILD files, and often updated automatically by gazelle.
+
+After we ran gazelle the BUILD.bazel file was updated to include two new StarLark definitions:
+
+```
+go_library(
+    name = "bazel-go-example-code_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/chrislovecnm/bazel-go-example-code",
+    visibility = ["//visibility:private"],
+    deps = ["//cmd"],
+)
+
+go_binary(
+    name = "bazel-go-example-code",
+    embed = [":bazel-go-example-code_lib"],
+    visibility = ["//visibility:public"],
+)
+```
+
+Both the go_libary and go_binary rules are defined for our code. The go_libary rule defines the build of a Go library from a set of source files that are all part of the same package. The go_binary rule defines the build of an executable from a set of source files, which must all be in the main package.  The go_rules project includes are great documentation [section](https://github.com/bazelbuild/rules_go/blob/master/docs/go/core/rules.md#introduction) if you want more details.
+
+More BUILD.bazel files where also created. Here is the BUILD.bazel file that was created in 
+the cmd folder.
+
+```
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmd",
+    srcs = [
+        "roll.go",
+        "root.go",
+        "word.go",
+    ],
+    importpath = "github.com/chrislovecnm/bazel-go-example-code/cmd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
+```
+
+The first line load the SkyLark definition from the go_rules library. You can then
+use "go_libary" which is used directly after.  This go_libary definition also mentions
+an external dependency using cobra.
+
+### How these files work together
+
+The WORKSPACE, dep.bz, and BUILD.bazel files create an object tree that bazel uses.
+
+For instance the WORKSPACE file has the following two lines:
+
+```
+http_archive(
+    name = "io_bazel_rules_go",
+```
+
+We are not including the full call for the sake of brevity. This http_archive definition tells
+bazel to download and use a specific version of rules_go. If you look at the BUILD.bazel file in the
+root directory you can see load command for rules_go, which exports go_libary.
+
+```
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+```
+
+The go_libary definition is then used later in the file.
+
+```
+go_library(
+    name = "bazel-go-example-code_lib",
+```
+
+So the WORKSPACE file includes the definition of which rules_go we are using and then the BUILD.bazel
+files loads those rules and uses one of the definitions in the rules. 
 
 
+// TODO a couple of images here for object graphs
+
+The same kind of object graph is used for external dependencies. The WORKSPACE file include the
+definition for gazelle (http_archive) and includes an import for the deps.bzl file. The deps.bzl file
+includes load definitions for the gazelle "go_repository" rule.   The go_repository rules define various
+external go dependencies that are then vendored.  One of those dependencies is cobra, and cobra is used
+as a dependecy by all of the go files inside of the cmd directory. Inside of the BUILD.bazel file in the cmd 
+directory the a "deps" are a parameter passed in the go_libary rule.
+
+```
+    deps = ["@com_github_spf13_cobra//:go_default_library"],
+```
+
+So now we have the capabilty for bazel to:
+
+- Build an object tree for the project
+- Various rules are defined that impact the object tree
+- go_rules and gazelle define various rules
+- the bazel object tree includes go_libary rules
+- external depencies are defined in go_repository rules
+- deps are passed into go_libary rules
+
+All of this and more allows for 
+
+```
+$ bazelisk build //...
+
+```
+
+Where bazel will download and cache all dependencies including but not limited to
+- The defined GoLang compiler and libaries
+- The defined rules sets
+- build the go binary that is defined the in root of the project.
+
+
+// TODO include the syntax behind def"
 
 
 Next we will modify the root.go and word.go files.
