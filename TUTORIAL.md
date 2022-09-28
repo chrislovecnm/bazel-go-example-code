@@ -1,5 +1,19 @@
 # Go and Bazel
 
+## This tutorial covers
+
+- Background of bazel and it's Go support
+- Creating a basic Go project for the tutorial
+- Implementing a WORKSPACE and BUILD.bazel files
+- Using gazelle to generate more WORKSPACE and BUILD.bazel updates
+- Utilzing different Bazel commands
+- An overview of gazelle and Go dependency management
+- Understanding the contents of the WORKSPACE and BUILD.bazel files
+- Creating new internal dependencies and using gazelle to update bazel
+- Adding an a new external Go dependency and the Go vendoring
+- Running and implementing Go tests with bazel
+- Covering other rules in rules_go
+
 ## About Bazel and Go
 
 This tutorial is going to cover how bazel support the programming language Go.
@@ -55,7 +69,7 @@ Python you have a jump start on learning Starlark.
 Before we start going through rules_go and gazelle we are going to cover a couple of dependencies for this 
 tutorial and create a simple Go project.
 
-## Dependencies
+## Dependencies for the tutorial
 
 We use the following dependencies for this tutorial.
 
@@ -176,6 +190,21 @@ You will end up with the following file structure:
     └── word
         └── generate_word.go
 ```
+
+Next build a .gitignore file:
+
+```
+$ tee -a .gitignore << EOF
+/bazel-$(basename $(pwd))
+/bazel-bazel-gazelle
+/bazel-bin
+/bazel-out
+/bazel-testlogs
+EOF
+```
+
+Bazel creates various directories in the project root and this file will allow git 
+to ignore those directories.
 
 This is a good time to push your files into a remote git repository like GitHub. Now
 we cover rules_go and gazelle.
@@ -1160,11 +1189,42 @@ So now we know how to include a new unit test, update BUILD.bazel rules with gaz
 The rules_go [documentation](https://github.com/bazelbuild/rules_go#documentation) provides a great reference to the different
 rules provided in the ruleset.
 
-We have covered three of the top rules 'go_binary', 'go_library', and 'go_test'. Other popular rules include:
+We have covered three of the top rules 'go_binary', 'go_library', and 'go_test'.  We also coverred a rules that
+gazelle uses to manage dependencies called 'go_repository'.
 
-- Proto rules rules_go provides rules that generate Go packages from .proto files. These packages can be imported like regular Go libraries.
+Other go_rules rules include:
+
+- Proto rules that generate Go packages from .proto files. These packages can be imported like regular Go libraries.
+- The Go toolchain is a set of rules used to customize the behavior of the core Go rules.  The Go toolchain allows for the configuration
+of the Go distribution utilised. The toolchain declare Bazel toolchains for each target platform that Go supports. The context rules all for the writing custom rules
+that are compatible with rules_go.
+- Also go_rules includes rule for using go mock, and  the rule go_embed_data.
+The rule go_embed_data generates a .go file that contains data from a file or a list of files. 
+- The nogo rule support using nogo during testing. The code analysis tool nogo screens code preventing bugs and code anti-patterns, and can also run vet.
+
+Other capabilities of go_rules include:
+
+- creating pure go binaries
+- building go static binaries
+- basic race condition detection
+
+And lastly you probably know that Go supports cross-compilation, and this is really nice when we are developing for containers.  Withing rules_go they 
+have included go_cross_binary, which allows your to define the creation of a binary for a specific operating system and CPU architecture. This
+can allow us to develop on a Mac and run the binary on that Mac, while also building a binary for Linux.  We then would use a set of bazel
+rules that support the building of containers, and bazel can put the Linux binary in the container.
 
 ## Summary
 
-
+- Bazel supports the building and testing of the Go programming language using the rules_go ruleset.
+- Intially you need to create a basic WORKSPACE and BUILD.bazel file in the root directory of your project.
+- You can use gazelle to create and maintain various bazel files.
+- Gazelle can update various bazel files when you add new go file or go tests.
+- Bazel supports many commands, and we coverred the build, run and test commands.
+- Bazel uses an object tree that is based on WORKSPACE, BUILD.bazel and other bazel files.
+- The ruleset rules_go provides various rules like go_binary, go_libary and go_test.  They are used
+to build binaries, libaries and supporting unit testing.
+- Gazelle can update BUILD.bazel and dep.bzl files with either internal or external Go dependencies.
+- The go_test rule is used to defined Go unit tests.
+- Various other rules are defined by go_rules.  These rules include managing protocol buffers, grpc, cross compilation, and controlling various
+aspects of how the Go SDK is downloaded and configured.
 
