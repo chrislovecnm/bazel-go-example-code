@@ -497,6 +497,7 @@ Or we can build all of the targets under the pkg directory:
 ```
 $ bazelisk build //pkg/...
 ```
+#### Note about binaries and build
 
 We wanted to include a side note about "bazel build".  You may wonder where the heck is the binary put?
 Bazel creates various folders and symlinks in project directory. Within out example we have
@@ -680,23 +681,13 @@ Where bazel will download and cache all dependencies including but not limited t
 - The defined rules sets
 - build the go binary that is defined the in root of the project.
 
-
-// TODO include the syntax behind def"
-
-
-Next we will modify the root.go and word.go files.
+Next we will make some code changes and introduce some internal code
+dependencies.
 
 ## Using the files under pkg
 
-Now we want to add in the roll and word files under the pkg directory.
+Now we want to modify and use the files under the pkg directory.
 
-```
-├── cmd
-│   ├── roll.go
-└── pkg
-    └── roll
-        └── roll_dice.go
-```
 
 Edit roll.go under the cmd folder and add an import to roll_dice.
 
@@ -714,10 +705,20 @@ import (
 Then call `roll.Roll()` after the `fmt.Println` statement. This will give you:
 
 ```
-   Run: func(cmd *cobra.Command, args []string) {
+   Run: func(cmd \*cobra.Command, args []string) {
        fmt.Println("roll called")
        roll.Roll()
    },
+```
+
+You have editted the following files.
+
+```
+├── cmd
+│   ├── roll.go
+└── pkg
+    └── roll
+        └── roll_dice.go
 ```
 
 We now need to update the BAZEL.build files, and the easiest way to do this is to run gazelle again.
@@ -727,7 +728,6 @@ Execute the following command
 ```
 $ bazelisk run //:gazelle
 ```
-
 We can now use bazel to run the binary again:
 
 ```
@@ -742,7 +742,7 @@ is an example of the output from the run command.
 INFO: Analyzed target //:bazel-go-example-code (1 packages loaded, 6 targets configured).
 INFO: Found 1 target...
 Target //:bazel-go-example-code up-to-date:
-  bazel-bin/bazel-go-example-code_/bazel-go-example-code
+  bazel-bin/bazel-go-example-code\_/bazel-go-example-code
 INFO: Elapsed time: 0.316s, Critical Path: 0.16s
 INFO: 3 processes: 1 internal, 2 linux-sandbox.
 INFO: Build completed successfully, 3 total actions
@@ -839,7 +839,7 @@ The above command genertates the following output.
 INFO: Analyzed target //:bazel-go-example-code (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //:bazel-go-example-code up-to-date:
-  bazel-bin/bazel-go-example-code_/bazel-go-example-code
+  bazel-bin/bazel-go-example-code\_/bazel-go-example-code
 INFO: Elapsed time: 0.107s, Critical Path: 0.00s
 INFO: 1 process: 1 internal.
 INFO: Build completed successfully, 1 total action
@@ -853,7 +853,6 @@ principle of using internal dependencies.  Next we will add a go project that
 is hosted out of github, and not local to this project.
 
 ## Adding external dependency
-
 
 To create our random work generator we are going to use babble, which is located here: 
 https://github.com/tjarratt/babble. The babble code On Linux uses "/usr/share/dicts/words" file, and you can use 
